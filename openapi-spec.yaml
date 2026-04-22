@@ -1,0 +1,599 @@
+openapi: 3.0.0
+info:
+  title: Order API
+  version: 1.0.0
+  description: API untuk modul pemesanan (Order Management System)
+  contact:
+    name: API Support
+    email: support@example.com
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Development server
+  - url: https://api.example.com/v1
+    description: Production server
+
+# ==================== SECURITY SCHEMES ====================
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT Bearer token untuk autentikasi
+
+  # ==================== SCHEMAS / MODELS ====================
+  schemas:
+    # ===== Auth Schemas =====
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email pengguna
+          example: user@example.com
+        password:
+          type: string
+          minLength: 6
+          description: Password pengguna (minimal 6 karakter)
+          example: password123
+
+    LoginResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Login berhasil
+        token:
+          type: string
+          description: JWT Bearer token untuk request berikutnya
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              example: "1"
+            email:
+              type: string
+              format: email
+              example: user@example.com
+            name:
+              type: string
+              example: John Doe
+
+    LogoutResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Logout berhasil
+
+    # ===== Order Schemas =====
+    OrderRequest:
+      type: object
+      required:
+        - customerId
+        - items
+        - totalAmount
+      properties:
+        customerId:
+          type: string
+          minLength: 1
+          description: ID pelanggan yang melakukan pemesanan
+          example: "CUST001"
+        items:
+          type: array
+          minItems: 1
+          description: Daftar item dalam pesanan
+          items:
+            type: object
+            required:
+              - productId
+              - quantity
+              - unitPrice
+            properties:
+              productId:
+                type: string
+                minLength: 1
+                example: "PROD001"
+              quantity:
+                type: integer
+                minimum: 1
+                example: 5
+              unitPrice:
+                type: number
+                minimum: 0
+                format: double
+                example: 10000.00
+        totalAmount:
+          type: number
+          minimum: 0
+          format: double
+          description: Total harga pesanan
+          example: 50000.00
+        shippingAddress:
+          type: string
+          description: Alamat pengiriman
+          example: Jl. Merdeka No. 123, Jakarta
+        notes:
+          type: string
+          maxLength: 500
+          description: Catatan atau instruksi khusus untuk pesanan
+          example: Mohon bungkus rapi
+
+    OrderResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID unik pesanan
+          example: "ORD001"
+        customerId:
+          type: string
+          example: "CUST001"
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              productId:
+                type: string
+              quantity:
+                type: integer
+              unitPrice:
+                type: number
+              subtotal:
+                type: number
+        totalAmount:
+          type: number
+          format: double
+          example: 50000.00
+        status:
+          type: string
+          enum: [PENDING, CONFIRMED, SHIPPED, DELIVERED, CANCELLED]
+          description: Status pesanan
+          example: PENDING
+        shippingAddress:
+          type: string
+          example: Jl. Merdeka No. 123, Jakarta
+        notes:
+          type: string
+          example: Mohon bungkus rapi
+        createdAt:
+          type: string
+          format: date-time
+          description: Waktu pembuatan pesanan
+          example: "2026-04-22T10:30:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Waktu update terakhir pesanan
+          example: "2026-04-22T10:30:00Z"
+
+    OrderListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Data pesanan berhasil diambil
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderResponse'
+        pagination:
+          type: object
+          properties:
+            page:
+              type: integer
+              example: 1
+            pageSize:
+              type: integer
+              example: 10
+            totalRecords:
+              type: integer
+              example: 25
+            totalPages:
+              type: integer
+              example: 3
+
+    SingleOrderResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Data pesanan berhasil diambil
+        data:
+          $ref: '#/components/schemas/OrderResponse'
+
+    # ===== Error Schemas =====
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Terjadi kesalahan
+        error:
+          type: string
+          description: Deskripsi detail error
+          example: Request body tidak valid
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-04-22T10:30:00Z"
+
+    ValidationErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Validasi gagal
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                example: email
+              message:
+                type: string
+                example: Email harus valid
+
+# ==================== PATHS / ENDPOINTS ====================
+paths:
+  # ===== AUTHENTICATION ENDPOINTS =====
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login user
+      description: Endpoint untuk autentikasi pengguna dan mendapatkan JWT token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              success:
+                summary: Contoh request login yang valid
+                value:
+                  email: user@example.com
+                  password: password123
+      responses:
+        "200":
+          description: Login berhasil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+              examples:
+                success:
+                  summary: Login berhasil
+                  value:
+                    success: true
+                    message: Login berhasil
+                    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                    user:
+                      id: "1"
+                      email: user@example.com
+                      name: John Doe
+        "400":
+          description: Request body tidak valid atau data yang diperlukan kosong
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+              examples:
+                invalid_email:
+                  summary: Email format tidak valid
+                  value:
+                    success: false
+                    message: Validasi gagal
+                    errors:
+                      - field: email
+                        message: Email harus valid
+        "401":
+          description: Email atau password salah
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: Email atau password salah
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Logout user
+      description: Endpoint untuk logout dan invalidate JWT token
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Logout berhasil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutResponse'
+              example:
+                success: true
+                message: Logout berhasil
+        "401":
+          description: Token tidak valid atau telah expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: Token tidak valid atau telah expired
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ===== ORDER ENDPOINTS =====
+  /orders:
+    post:
+      tags:
+        - Orders
+      summary: Buat pesanan baru
+      description: Endpoint untuk membuat pesanan baru (hanya untuk user yang sudah autentikasi)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderRequest'
+            examples:
+              valid_order:
+                summary: Contoh pesanan yang valid
+                value:
+                  customerId: "CUST001"
+                  items:
+                    - productId: "PROD001"
+                      quantity: 5
+                      unitPrice: 10000.00
+                    - productId: "PROD002"
+                      quantity: 3
+                      unitPrice: 15000.00
+                  totalAmount: 95000.00
+                  shippingAddress: Jl. Merdeka No. 123, Jakarta
+                  notes: Mohon bungkus rapi
+      responses:
+        "201":
+          description: Pesanan berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SingleOrderResponse'
+              example:
+                success: true
+                message: Pesanan berhasil dibuat
+                data:
+                  id: "ORD001"
+                  customerId: "CUST001"
+                  items:
+                    - productId: "PROD001"
+                      quantity: 5
+                      unitPrice: 10000.00
+                      subtotal: 50000.00
+                  totalAmount: 95000.00
+                  status: PENDING
+                  shippingAddress: Jl. Merdeka No. 123, Jakarta
+                  notes: Mohon bungkus rapi
+                  createdAt: "2026-04-22T10:30:00Z"
+                  updatedAt: "2026-04-22T10:30:00Z"
+        "400":
+          description: Request body tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+              example:
+                success: false
+                message: Validasi gagal
+                errors:
+                  - field: items
+                    message: Minimal harus ada 1 item dalam pesanan
+        "401":
+          description: Token tidak valid atau tidak dikirimkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags:
+        - Orders
+      summary: Dapatkan daftar semua pesanan
+      description: Endpoint untuk mengambil daftar pesanan dengan pagination
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Nomor halaman (mulai dari 1)
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+          example: 1
+        - name: pageSize
+          in: query
+          description: Jumlah data per halaman
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 100
+          example: 10
+        - name: status
+          in: query
+          description: Filter berdasarkan status pesanan
+          schema:
+            type: string
+            enum: [PENDING, CONFIRMED, SHIPPED, DELIVERED, CANCELLED]
+          example: PENDING
+      responses:
+        "200":
+          description: Daftar pesanan berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderListResponse'
+              example:
+                success: true
+                message: Data pesanan berhasil diambil
+                data:
+                  - id: "ORD001"
+                    customerId: "CUST001"
+                    totalAmount: 95000.00
+                    status: PENDING
+                    createdAt: "2026-04-22T10:30:00Z"
+                    updatedAt: "2026-04-22T10:30:00Z"
+                pagination:
+                  page: 1
+                  pageSize: 10
+                  totalRecords: 25
+                  totalPages: 3
+        "401":
+          description: Token tidak valid atau tidak dikirimkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /orders/{orderId}:
+    get:
+      tags:
+        - Orders
+      summary: Dapatkan detail pesanan berdasarkan ID
+      description: Endpoint untuk mengambil detail pesanan spesifik
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          description: ID pesanan yang ingin diambil
+          schema:
+            type: string
+            minLength: 1
+          example: "ORD001"
+      responses:
+        "200":
+          description: Detail pesanan berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SingleOrderResponse'
+              example:
+                success: true
+                message: Data pesanan berhasil diambil
+                data:
+                  id: "ORD001"
+                  customerId: "CUST001"
+                  items:
+                    - productId: "PROD001"
+                      quantity: 5
+                      unitPrice: 10000.00
+                      subtotal: 50000.00
+                  totalAmount: 95000.00
+                  status: PENDING
+                  shippingAddress: Jl. Merdeka No. 123, Jakarta
+                  notes: Mohon bungkus rapi
+                  createdAt: "2026-04-22T10:30:00Z"
+                  updatedAt: "2026-04-22T10:30:00Z"
+        "400":
+          description: ID pesanan tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: ID pesanan tidak valid
+        "401":
+          description: Token tidak valid atau tidak dikirimkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        "404":
+          description: Pesanan dengan ID tersebut tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                message: Pesanan dengan ID tersebut tidak ditemukan
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+# ==================== GLOBAL SECURITY ====================
+security:
+  - bearerAuth: []
+
+# ==================== TAGS ====================
+tags:
+  - name: Authentication
+    description: Endpoint untuk autentikasi dan manajemen session user
+  - name: Orders
+    description: Endpoint untuk manajemen pesanan (CRUD operations)
