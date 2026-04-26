@@ -29,6 +29,19 @@ public class StockController {
         return ResponseEntity.ok(stockService.getStockById(id));
     }
 
+    @GetMapping("/product/{productId}")
+    public ResponseEntity<StockResponse> getStockByProductId(@PathVariable Long productId) {
+        return ResponseEntity.ok(stockService.getTotalStockByProductId(productId));
+    }
+
+    @GetMapping("/product/{productId}/check/{quantity}")
+    public ResponseEntity<Boolean> checkSufficientStock(
+            @PathVariable Long productId,
+            @PathVariable Integer quantity) {
+        boolean hasSufficientStock = stockService.hassufficientStock(productId, quantity);
+        return ResponseEntity.ok(hasSufficientStock);
+    }
+
     @PostMapping
     public ResponseEntity<StockResponse> createStock(@Valid @RequestBody StockRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(stockService.createStock(request));

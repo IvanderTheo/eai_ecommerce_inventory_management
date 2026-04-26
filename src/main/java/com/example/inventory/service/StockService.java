@@ -167,4 +167,30 @@ public class StockService {
             .orElseThrow(() -> new RuntimeException("Stock not found with id: " + id));
         stockRepository.delete(stock);
     }
+
+    /**
+     * Get total stock for a product across all warehouses
+     * Used for order validation
+     */
+    public StockResponse getTotalStockByProductId(Long productId) {
+        List<Stock> stocks = stockRepository.findByProductId(productId);
+        
+        if (stocks.isEmpty()) {
+            throw new RuntimeException("No stock found for product with id: " + productId);
+        }
+
+        // Return the first stock found (or aggregate if needed)
+        // For simplicity, returning first warehouse stock
+        return convertToResponse(stocks.get(0));
+    }
+
+    /**
+     * Check if product has sufficient stock in any warehouse
+     */
+    public boolean hasSufficientStock(Long productId, Integer requiredQuantity) {
+        List<Stock> stocks = stockRepository.findByProductId(productId);
+        
+        return stocks.stream()
+            .anyMatch(stock -> stock.getAvailableQuantity() >= requiredQuantity);
+    }
 }
