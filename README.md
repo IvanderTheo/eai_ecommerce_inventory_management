@@ -38,16 +38,113 @@ Inventory Management System adalah REST API untuk mengelola stok barang di multi
 
 ## 🔌 API Endpoints
 
-### Warehouses
-- `GET /api/warehouses` - Get all warehouses
-- `GET /api/warehouses/{id}` - Get warehouse by ID
-- `POST /api/warehouses` - Create new warehouse
-- `PUT /api/warehouses/{id}` - Update warehouse
+> **Dokumentasi lengkap dengan JSON examples:** Lihat [API_RESPONSES.md](API_RESPONSES.md)  
+> **Testing Guide dengan cURL commands:** Lihat [API_TEST_GUIDE.md](API_TEST_GUIDE.md)
+
+### Products API
+- `GET /api/products` - Get all products → ProductResponse[]
+- `POST /api/products` - Create new product → ProductResponse
+- `GET /api/products/{id}` - Get product by ID → ProductResponse
+- `PUT /api/products/{id}` - Update product → ProductResponse
+- `DELETE /api/products/{id}` - Delete product
+
+### Warehouses API
+- `GET /api/warehouses` - Get all warehouses → WarehouseResponse[]
+- `POST /api/warehouses` - Create new warehouse → WarehouseResponse
+- `GET /api/warehouses/{id}` - Get warehouse by ID → WarehouseResponse
+- `PUT /api/warehouses/{id}` - Update warehouse → WarehouseResponse
 - `DELETE /api/warehouses/{id}` - Delete warehouse
 
-### Products
-- `GET /api/products` - Get all products
-- `GET /api/products/{id}` - Get product by ID
+### Stocks API
+- `GET /api/stocks` - Get all stocks → StockResponse[]
+- `POST /api/stocks` - Create new stock → StockResponse
+- `GET /api/stocks/{id}` - Get stock by ID → StockResponse
+- `PUT /api/stocks/{id}` - Update stock → StockResponse
+- `DELETE /api/stocks/{id}` - Delete stock
+
+### Stock Movement API
+- `POST /api/stocks/move` - Move stock between warehouses → StockMovementResponse
+
+---
+
+## 📝 Response DTOs
+
+### ProductResponse
+```json
+{
+  "id": 1,
+  "sku": "PROD-001",
+  "name": "Laptop Dell XPS",
+  "description": "High-performance laptop",
+  "price": 1299.99,
+  "weight": 1.8,
+  "unitSize": 0.5
+}
+```
+
+### WarehouseResponse
+```json
+{
+  "id": 1,
+  "code": "WH-001",
+  "name": "Jakarta Main Warehouse",
+  "location": "Jakarta Timur",
+  "capacity": 10000.0,
+  "usedCapacity": 3500.0,
+  "description": "Main distribution center",
+  "active": true
+}
+```
+
+### StockResponse
+```json
+{
+  "id": 1,
+  "warehouseId": 1,
+  "warehouseName": "Jakarta Main Warehouse",
+  "productId": 1,
+  "productName": "Laptop Dell XPS",
+  "quantity": 50,
+  "reservedQuantity": 10,
+  "minimalStock": 20
+}
+```
+
+### StockMovementResponse
+```json
+{
+  "id": 1,
+  "sourceWarehouseId": 1,
+  "sourceWarehouseName": "Jakarta Main Warehouse",
+  "destinationWarehouseId": 2,
+  "destinationWarehouseName": "Surabaya Regional Warehouse",
+  "productId": 1,
+  "productName": "Laptop Dell XPS",
+  "quantity": 20,
+  "notes": "Transfer to Surabaya warehouse",
+  "movementType": "TRANSFER",
+  "timestamp": "2026-04-19T16:30:00Z"
+}
+```
+
+---
+
+## 🔄 No Circular References
+
+Semua endpoints mengembalikan **Response DTOs** yang tidak memiliki circular references:
+- ✅ Tidak ada nested collections
+- ✅ Relasi ditampilkan sebagai ID + Name
+- ✅ Serialization aman tanpa infinite loops
+- ✅ Response payload lebih ringan
+
+---
+
+## 📖 Documentation Files
+
+- **[API_RESPONSES.md](API_RESPONSES.md)** - Complete JSON response examples untuk semua endpoints
+- **[API_TEST_GUIDE.md](API_TEST_GUIDE.md)** - cURL commands untuk testing API
+
+---
 - `POST /api/products` - Create new product
 - `PUT /api/products/{id}` - Update product
 - `DELETE /api/products/{id}` - Delete product
