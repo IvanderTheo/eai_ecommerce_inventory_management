@@ -38,7 +38,8 @@ public class StockController {
     public ResponseEntity<Boolean> checkSufficientStock(
             @PathVariable Long productId,
             @PathVariable Integer quantity) {
-        boolean hasSufficientStock = stockService.hassufficientStock(productId, quantity);
+        // DI SINI SALAH KETIK: 'hassufficientStock' (s kecil)
+        boolean hasSufficientStock = stockService.hasSufficientStock(productId, quantity);
         return ResponseEntity.ok(hasSufficientStock);
     }
 
